@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        ">
+
+	<!-- shiro为集成springMvc 拦截异常 -->
+	<bean
+		class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+		<property name="exceptionMappings">
+			<props>
+				<!-- 没有权限异常跳转的页面 -->
+				<prop key="org.apache.shiro.authz.UnauthorizedException">unauthorized</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 开启aop，对代理类 -->
+	<aop:config proxy-target-class="true"></aop:config>
+
+	<!-- 开启shiro的注解支持 -->
+	<bean
+		class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<!-- 注入安全管理器 -->
+		<property name="securityManager" ref="securityManager"></property>
+	</bean>
+
+	<!-- 配置自定义表单认证过滤器 -->
+	<bean id="myFormAutnenticationFilter" class="cn.yq.oa.filter.MyFormAuthenticationFilter" >
+			<!-- 设置表单提交的账号表单名称 -->
+		<property name="usernameParam" value="username"/>
+		<!-- 设置表单提交的账号表单名称 -->
+		<property name="passwordParam" value="password"/>
+		<!-- 设置表单提交的账号表单名称 -->
+		<property name="rememberMeParam" value="rememberMe"/>
+	</bean>
+
+	<!-- 配置shiroFilter过滤器 -->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		
+		
+		
+		<!-- 配置自定义过滤器：一定要最最上面 -->
+		<property name="filters">
+			<map>
+				<!-- 自定义表单认证过滤器 -->
+				<entry key="authc" value-ref="myFormAutnenticationFilter" />
+			</map>
+		</property>
+		<!-- 安全管理器 -->
+		<property name="securityManager" ref="securityManager" />
+		
+		<!-- 认证页面 -->
+		<property name="loginUrl" value="/user/login.do" />
+		
+		<!-- 认证成功跳转的页面：首页 -->
+		<property name="successUrl" value="/index.do" />
+		
+		<!-- 配置shiro的过滤器链定义 -->
+		<property name="filterChainDefinitions">
+			<value>
+				<!-- 静态资源匿名访问 -->
+				/lib/** = anon
+				/static/** =anon
+				/login.jsp = anon
+				<!-- 退出登录过滤器，清除Session数据 -->
+				/user/logout.do = logout
+				<!-- 验证码 -->
+				/verifyCode.jsp = anon
+				/index.do = user
+				<!-- /**所有请求 ，authc 表示所有请求都需要认证通过才可以访问 -->
+				/** = authc
+			</value>
+		</property>
+	</bean>
+
+	<!-- 配置安全管理器 -->
+	<bean id="securityManager"
+		class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<!-- 配置realm -->
+		<property name="realm" ref="userRealm" />
+		<!-- 注入缓存管理器 -->
+		<property name="cacheManager" ref="cacheManager"></property>
+		<!-- 记住我 -->
+		<property name="rememberMeManager" ref="rememberMeManager"/>
+	</bean>
+	
+	<!-- 记住我 -->
+	<bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+		<!-- 注入cookie -->
+		<property name="cookie">
+			<bean class="org.apache.shiro.web.servlet.SimpleCookie">
+				<!-- 使用构造器设置cookie名称 -->
+				<constructor-arg value="rememberMe"/>
+				<!-- 设置最大有效期 :单位秒 -->
+				<property name="maxAge" value="#{3600 * 24 * 7}"/>
+				<!-- 保存到本地Cookie的名称 -->
+				<!-- <property name="name" value="rememberMe"/> -->
+			</bean>
+		</property>
+	</bean>
+	
+	<!-- 缓存管理器 -->
+	<bean id="cacheManager"
+		class="org.apache.shiro.cache.ehcache.EhCacheManager">
+		<!-- 读取ehcache配置文件 -->
+		<property name="cacheManagerConfigFile"
+			value="classpath:ehcache-shiro.xml"></property>
+	</bean>
+	
+	<!-- 配置自定义realm -->
+	<bean id="userRealm" class="cn.yq.oa.realm.UserRealm">
+
+		<!-- 凭证匹配器 -->
+		<property name="credentialsMatcher">
+			<bean
+				class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+				<!-- 指定算法 -->
+				<property name="hashAlgorithmName" value="MD5" />
+				<!-- 散列两次 -->
+				<property name="hashIterations" value="2" />
+			</bean>
+		</property>
+
+	</bean>
+</beans>

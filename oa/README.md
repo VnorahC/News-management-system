@@ -1,0 +1,1 @@
+使用Spring，SpringMVC,MyBatis,Shiro安全框架，对权限、用户、角色、菜单、安全进行系统的管理。

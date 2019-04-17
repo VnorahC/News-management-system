@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.yq.oa.mapper.CustomPermissionMapper">
+  <resultMap id="BaseResultMap" type="cn.yq.oa.pojo.Permission">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
+    <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="percode" jdbcType="VARCHAR" property="percode" />
+    <result column="parentid" jdbcType="BIGINT" property="parentid" />
+    <result column="sortstring" jdbcType="VARCHAR" property="sortstring" />
+    <result column="available" jdbcType="INTEGER" property="available" />
+  </resultMap>
+  
+  <select id="selectPermissionIdsByRoleId" resultType="int">
+  	select sys_permission_id from sys_role_permission where sys_role_id = #{roleId}
+  </select>
+ <!--  删除角色权限表（sys_role_permission）中对应角色id的所有权限数据 -->
+  <delete id="deleteRolePermissionByRoleId">
+  	delete from sys_role_permission where sys_role_id = #{roleId}
+  </delete>
+  
+  <!-- 插入角色权限表（sys_role_permission）中对应角色id的所有权限数据 -->
+  <insert id="insertRolePermissionByRoleId" >
+  	insert into sys_role_permission 
+  	(sys_role_id,sys_permission_id)values(#{roleId},#{permissionId})
+  </insert>
+  
+  <!-- 根据角色id查询出对应的所有的权限表达式 -->
+  <select id="selectPermissionsByRoleid" resultType="string">
+  	select percode from sys_permission where id 
+  	in(select sys_permission_id from sys_role_permission where sys_role_id = #{roleId})
+  </select>
+  
+  <!-- 查询一级菜单 -->
+  <select id="selectParentMenu" resultType="cn.yq.oa.pojo.Menu">
+  	select id,name,url,parentid from sys_permission 
+	where id in(select sys_permission_id from sys_role_permission 
+	where sys_role_id = #{roleId}) and type='menu' and parentid is null
+  </select>
+    <!--查询子菜单：二级菜单 -->
+  <select id="selectSubMenu" resultType="cn.yq.oa.pojo.Menu">
+  	select id,name,url,parentid from sys_permission 
+	where id in(select sys_permission_id from sys_role_permission 
+	where sys_role_id = #{roleId}) and type='menu' and parentid = #{parentId}
+  </select>
+</mapper>
